@@ -35,7 +35,7 @@ DATA:5.18,182.5,945.3,12.4,95,42,2150,2080,1950,1920,auto
 
 ## 3. Server → Trình duyệt (WebSocket)
 
-- **Endpoint**: `ws://localhost:8080/ws`
+- **Endpoint**: `ws://localhost:8081/ws`
 - **Payload**:
 
 ```json

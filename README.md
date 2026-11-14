@@ -154,8 +154,8 @@ Chương trình vận hành với 2 FreeRTOS tasks chạy song song:
 | Lệnh | Chức năng |
 | :--- | :--- |
 | `make app` | Khởi động InfluxDB, Go Backend và Web Dev Server |
-| `make server` | Chỉ chạy Go Backend (cổng 8080) |
-| `make dev` | Chỉ chạy Frontend SvelteKit (cổng 5173) |
+| `make server` | Chỉ chạy Go Backend (cổng 8081) |
+| `make dev` | Chỉ chạy Frontend SvelteKit (cổng 5174) |
 | `make mock` | Chạy tool giả lập dữ liệu ESP32 phát qua MQTT để test giao diện |
 | `make down` | Dừng các container InfluxDB |
 
@@ -174,4 +174,4 @@ make dev
 make mock
 ```
 
-Truy cập trình duyệt tại `http://localhost:5173` để quan sát biểu đồ công suất, thanh đo 4 LDR và góc quay servo thời gian thực.
+Truy cập trình duyệt tại `http://localhost:5174` để quan sát biểu đồ công suất, thanh đo 4 LDR và góc quay servo thời gian thực.
