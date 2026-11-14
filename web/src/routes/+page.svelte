@@ -1,14 +1,21 @@
 <script lang="ts">
     import { ws } from "$lib/ws.svelte";
     import SensorChart from "$lib/components/SensorChart.svelte";
+    import AngleDisplay from "$lib/components/AngleDisplay.svelte";
+    import LdrBar from "$lib/components/LdrBar.svelte";
 
-    const temp = $derived(ws.latest?.temperature ?? null);
-    const hum = $derived(ws.latest?.humidity ?? null);
+    const volt  = $derived(ws.latest?.volt ?? null);
+    const curr  = $derived(ws.latest?.curr ?? null);
+    const power = $derived(ws.latest?.power ?? null);
+    const energy = $derived(ws.latest?.energy ?? null);
+    const azi   = $derived(ws.latest?.azi ?? 90);
+    const ele   = $derived(ws.latest?.ele ?? 90);
+    const ldr   = $derived(ws.latest?.ldr ?? [0, 0, 0, 0] as [number, number, number, number]);
+    const mode  = $derived(ws.latest?.mode ?? "---");
+
     const ts = $derived(
         ws.latest
-            ? new Date(ws.latest.timestamp).toLocaleTimeString("vi-VN", {
-                  hour12: false,
-              })
+            ? new Date(ws.latest.timestamp).toLocaleTimeString("vi-VN", { hour12: false })
             : "--:--:--",
     );
 
@@ -23,24 +30,27 @@
 <main>
     <header>
         <div class="brand">
-            <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path
-                    d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26C17.81 13.47 19 11.38 19 9c0-3.87-3.13-7-7-7z"
-                    fill="#f97316" />
-                <path
-                    d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1z"
-                    fill="#8891aa" />
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="4" fill="#f59e0b" />
+                <g stroke="#f59e0b" stroke-width="2" stroke-linecap="round">
+                    <line x1="12" y1="2" x2="12" y2="5" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                    <line x1="2" y1="12" x2="5" y2="12" />
+                    <line x1="19" y1="12" x2="22" y2="12" />
+                    <line x1="4.22" y1="4.22" x2="6.34" y2="6.34" />
+                    <line x1="17.66" y1="17.66" x2="19.78" y2="19.78" />
+                    <line x1="19.78" y1="4.22" x2="17.66" y2="6.34" />
+                    <line x1="6.34" y1="17.66" x2="4.22" y2="19.78" />
+                </g>
             </svg>
-            <span>TempLog</span>
+            <span>Solar Tracker</span>
         </div>
 
         <div class="status-group">
             <div class="date-label">{todayDate}</div>
+            <div class="mode-badge" class:auto={mode === "auto"}>
+                {mode.toUpperCase()}
+            </div>
             <div class="status" class:online={ws.connected}>
                 <span class="dot"></span>
                 {ws.connected ? "Live" : "Connecting..."}
@@ -48,102 +58,101 @@
         </div>
     </header>
 
+    <!-- stat cards -->
     <section class="stat-row">
-        <div class="stat-card temp">
+        <div class="stat-card power">
             <div class="stat-label">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path
-                        d="M12 2a3 3 0 0 1 3 3v8.17A5 5 0 1 1 7 17V5a3 3 0 0 1 3-3h2z"
-                        stroke="#f97316"
-                        stroke-width="2"
-                        stroke-linecap="round" />
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                    <path d="M13 2L4.5 13.5H11L10 22l9.5-12H14L13 2z" stroke="#f59e0b" stroke-width="2" stroke-linejoin="round"/>
                 </svg>
-                Temperature
+                Power
             </div>
-            <div class="stat-value">
-                {temp !== null ? temp.toFixed(2) : "---"}
-                <span class="unit">°C</span>
+            <div class="stat-value power-val">
+                {power !== null ? power.toFixed(1) : "---"}
+                <span class="unit">mW</span>
             </div>
-            <div class="stat-range">
-                <div class="range-item">
-                    <span class="range-label">MIN</span>
-                    <span class="range-val">{ws.stats.min_temp.toFixed(1)}°</span>
-                </div>
-                <div class="range-item">
-                    <span class="range-label">MAX</span>
-                    <span class="range-val">{ws.stats.max_temp.toFixed(1)}°</span>
-                </div>
-            </div>
+            <div class="stat-sub">Peak: {ws.stats.max_power.toFixed(1)} mW</div>
         </div>
 
-        <div class="stat-card hum">
+        <div class="stat-card volt">
             <div class="stat-label">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path
-                        d="M12 2l-6.5 9a6.5 6.5 0 1 0 13 0L12 2z"
-                        stroke="#38bdf8"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round" />
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2v20M2 12h20" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
                 </svg>
-                Humidity
+                Voltage
             </div>
-            <div class="stat-value">
-                {hum !== null ? hum.toFixed(2) : "---"}
-                <span class="unit">%</span>
+            <div class="stat-value volt-val">
+                {volt !== null ? volt.toFixed(2) : "---"}
+                <span class="unit">V</span>
             </div>
-            <div class="stat-range">
-                <div class="range-item">
-                    <span class="range-label">MIN</span>
-                    <span class="range-val">{ws.stats.min_hum.toFixed(1)}%</span>
-                </div>
-                <div class="range-item">
-                    <span class="range-label">MAX</span>
-                    <span class="range-val">{ws.stats.max_hum.toFixed(1)}%</span>
-                </div>
+            <div class="stat-sub">{curr !== null ? curr.toFixed(1) : "---"} mA</div>
+        </div>
+
+        <div class="stat-card energy">
+            <div class="stat-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="#4ade80" stroke-width="2"/>
+                </svg>
+                Energy
             </div>
+            <div class="stat-value energy-val">
+                {energy !== null ? energy.toFixed(2) : "---"}
+                <span class="unit">Wh</span>
+            </div>
+            <div class="stat-sub">tích lũy</div>
         </div>
 
         <div class="stat-card meta">
             <div class="stat-label">Last updated</div>
             <div class="stat-ts">{ts}</div>
-            <div class="stat-label" style="margin-top: 12px">Data points</div>
-            <div class="stat-count">
-                {ws.history.length}
-                <span class="unit">/ 60</span>
+            <div class="stat-label" style="margin-top: 10px">Data points</div>
+            <div class="stat-ts">{ws.history.length}<span class="unit"> / 60</span></div>
+        </div>
+    </section>
+
+    <!-- chart -->
+    <section class="chart-section">
+        <div class="chart-card">
+            <div class="chart-header">
+                <span class="chart-title power-text">Power</span>
+                <span class="chart-badge power-badge">mW</span>
+            </div>
+            <div class="chart-wrap">
+                <SensorChart
+                    history={ws.history}
+                    field="power"
+                    color="#f59e0b"
+                    glow="rgba(245,158,11,0.08)"
+                    unit="mW" />
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-header">
+                <span class="chart-title volt-text">Voltage / Current</span>
+                <span class="chart-badge volt-badge">V</span>
+            </div>
+            <div class="chart-wrap">
+                <SensorChart
+                    history={ws.history}
+                    field="volt"
+                    color="#38bdf8"
+                    glow="rgba(56,189,248,0.08)"
+                    unit="V" />
             </div>
         </div>
     </section>
 
-    <section class="chart-section">
-        <div class="chart-card">
-            <div class="chart-header">
-                <span class="chart-title temp-text">Temperature</span>
-                <span class="chart-badge temp-badge">°C</span>
-            </div>
-            <div class="chart-wrap">
-                <SensorChart
-                    history={ws.history}
-                    field="temperature"
-                    color="#f97316"
-                    glow="rgba(249,115,22,0.08)"
-                    unit="°C" />
-            </div>
+    <!-- angle + ldr -->
+    <section class="bottom-row">
+        <div class="stat-card bottom-card">
+            <div class="stat-label" style="margin-bottom: 8px">Servo Angles</div>
+            <AngleDisplay {azi} {ele} />
         </div>
 
-        <div class="chart-card">
-            <div class="chart-header">
-                <span class="chart-title hum-text">Humidity</span>
-                <span class="chart-badge hum-badge">%RH</span>
-            </div>
-            <div class="chart-wrap">
-                <SensorChart
-                    history={ws.history}
-                    field="humidity"
-                    color="#38bdf8"
-                    glow="rgba(56,189,248,0.08)"
-                    unit="%" />
-            </div>
+        <div class="stat-card bottom-card">
+            <div class="stat-label" style="margin-bottom: 8px">LDR Sensors</div>
+            <LdrBar {ldr} />
         </div>
     </section>
 </main>
@@ -158,7 +167,7 @@
         gap: 24px;
     }
 
-    /* ── header ── */
+    /* header */
     header {
         display: flex;
         align-items: center;
@@ -178,13 +187,31 @@
     .status-group {
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 12px;
     }
 
     .date-label {
         font-size: 0.9rem;
         font-weight: 500;
         color: var(--text-secondary);
+    }
+
+    .mode-badge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        font-family: var(--font-mono);
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(100, 100, 120, 0.15);
+        border: 1px solid rgba(100, 100, 120, 0.25);
+        color: var(--text-secondary);
+    }
+
+    .mode-badge.auto {
+        background: rgba(245, 158, 11, 0.12);
+        border-color: rgba(245, 158, 11, 0.3);
+        color: var(--solar-primary);
     }
 
     .status {
@@ -219,21 +246,14 @@
     }
 
     @keyframes pulse {
-        0%,
-        100% {
-            opacity: 1;
-            transform: scale(1);
-        }
-        50% {
-            opacity: 0.5;
-            transform: scale(0.8);
-        }
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50%       { opacity: 0.5; transform: scale(0.8); }
     }
 
-    /* ── stat cards ── */
+    /* stat cards */
     .stat-row {
         display: grid;
-        grid-template-columns: 1fr 1fr 220px;
+        grid-template-columns: 1fr 1fr 1fr 200px;
         gap: 16px;
     }
 
@@ -244,20 +264,13 @@
         padding: 20px 22px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        transition:
-            border-color 0.2s,
-            box-shadow 0.2s;
+        gap: 8px;
+        transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    .stat-card.temp:hover {
-        border-color: rgba(249, 115, 22, 0.4);
-        box-shadow: 0 0 20px rgba(249, 115, 22, 0.07);
-    }
-    .stat-card.hum:hover {
-        border-color: rgba(56, 189, 248, 0.4);
-        box-shadow: 0 0 20px rgba(56, 189, 248, 0.07);
-    }
+    .stat-card.power:hover { border-color: rgba(245,158,11,0.4); box-shadow: 0 0 20px rgba(245,158,11,0.07); }
+    .stat-card.volt:hover  { border-color: rgba(56,189,248,0.4); box-shadow: 0 0 20px rgba(56,189,248,0.07); }
+    .stat-card.energy:hover { border-color: rgba(74,222,128,0.4); box-shadow: 0 0 20px rgba(74,222,128,0.07); }
 
     .stat-label {
         display: flex;
@@ -271,70 +284,39 @@
     }
 
     .stat-value {
-        font-size: 2.6rem;
+        font-size: 2.4rem;
         font-weight: 700;
         font-family: var(--font-mono);
         letter-spacing: -0.03em;
         line-height: 1;
-        color: var(--text-primary);
     }
 
-    .stat-card.temp .stat-value {
-        color: #f97316;
-    }
-    .stat-card.hum .stat-value {
-        color: #38bdf8;
-    }
+    .power-val  { color: var(--solar-primary); }
+    .volt-val   { color: var(--blue-primary); }
+    .energy-val { color: var(--green-primary); }
 
     .unit {
-        font-size: 0.45em;
+        font-size: 0.42em;
         font-weight: 400;
         color: var(--text-secondary);
         vertical-align: super;
         margin-left: 2px;
     }
 
-    .stat-range {
-        display: flex;
-        gap: 16px;
-        margin-bottom: 4px;
-    }
-
-    .range-item {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .range-label {
-        font-size: 0.6rem;
-        font-weight: 600;
+    .stat-sub {
+        font-size: 0.8rem;
         color: var(--text-secondary);
-        letter-spacing: 0.05em;
-    }
-
-    .range-val {
-        font-size: 0.95rem;
-        font-weight: 600;
         font-family: var(--font-mono);
-        color: var(--text-primary);
     }
 
     .stat-ts {
         font-family: var(--font-mono);
-        font-size: 1.3rem;
+        font-size: 1.25rem;
         font-weight: 500;
         color: var(--text-primary);
     }
 
-    .stat-count {
-        font-family: var(--font-mono);
-        font-size: 1.3rem;
-        font-weight: 500;
-        color: var(--text-primary);
-    }
-
-    /* ── charts ── */
+    /* charts */
     .chart-section {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -357,18 +339,9 @@
         justify-content: space-between;
     }
 
-    .chart-title {
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 0.01em;
-    }
-
-    .temp-text {
-        color: #f97316;
-    }
-    .hum-text {
-        color: #38bdf8;
-    }
+    .chart-title { font-size: 0.85rem; font-weight: 600; }
+    .power-text  { color: var(--solar-primary); }
+    .volt-text   { color: var(--blue-primary); }
 
     .chart-badge {
         font-family: var(--font-mono);
@@ -378,41 +351,36 @@
         font-weight: 500;
     }
 
-    .temp-badge {
-        background: rgba(249, 115, 22, 0.12);
-        color: #f97316;
-    }
-    .hum-badge {
-        background: rgba(56, 189, 248, 0.12);
-        color: #38bdf8;
-    }
+    .power-badge { background: rgba(245,158,11,0.12); color: var(--solar-primary); }
+    .volt-badge  { background: rgba(56,189,248,0.12); color: var(--blue-primary); }
 
     .chart-wrap {
         height: 220px;
         position: relative;
     }
 
-    /* ── responsive ── */
-    @media (max-width: 900px) {
-        .stat-row {
-            grid-template-columns: 1fr 1fr;
-        }
-        .stat-card.meta {
-            grid-column: 1 / -1;
-            flex-direction: row;
-            gap: 24px;
-        }
-        .chart-section {
-            grid-template-columns: 1fr;
-        }
+    /* bottom row */
+    .bottom-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .bottom-card {
+        min-height: 180px;
+    }
+
+    /* responsive */
+    @media (max-width: 1000px) {
+        .stat-row { grid-template-columns: 1fr 1fr; }
+        .stat-card.meta { grid-column: 1 / -1; flex-direction: row; gap: 24px; }
+        .chart-section { grid-template-columns: 1fr; }
+        .bottom-row { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 540px) {
-        .stat-row {
-            grid-template-columns: 1fr;
-        }
-        .stat-value {
-            font-size: 2rem;
-        }
+        .stat-row { grid-template-columns: 1fr; }
+        .stat-value { font-size: 2rem; }
+        .date-label { display: none; }
     }
 </style>
