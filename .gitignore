@@ -1,7 +1,17 @@
 # ESP-IDF build output
 build/
+firmware/build/
+firmware/managed_components/
+firmware/.cache/
+firmware/.idf/
 sdkconfig.old
 sdkconfig.ci
+
+# Web & Environment
+.env
+web/node_modules/
+web/.svelte-kit/
+web/build/
 
 # IDE & Editor files
 .vscode/
