@@ -9,7 +9,7 @@ Chương trình được phát triển trên vi điều khiển **ESP32 DevKit V
 
 | STT | Linh kiện phần cứng | Vai trò trong hệ thống | Giao tiếp / Chân ESP32 |
 | :-: | :--- | :--- | :--- |
-| **01** | **ESP32 DevKit V4** | Bộ xử lý trung tâm, đọc ADC, điều khiển PWM, I2C | — |
+| **01** | **ESP32 DevKit V4** | Bộ xử lý trung tâm, đọc ADC, điều khiển PWM, I2C | - |
 | **02** | **Tấm pin mặt trời 5V 200mA** | Chuyển đổi quang năng thành điện năng, sạc pin | Nối vào INA219 & TP4056 |
 | **03** | **4 Quang trở LDR** (kèm trở 10k) | Cảm nhận cường độ ánh sáng 4 góc phần tư | ADC1 (GPIO 34, 35, 32, 33) |
 | **04** | **Tấm chắn chữ thập (+)** | Tạo bóng đổ chênh lệch ánh sáng lên 4 LDR | Đặt giữa 4 LDR |
@@ -19,7 +19,7 @@ Chương trình được phát triển trên vi điều khiển **ESP32 DevKit V
 | **08** | **Pin Li-ion 18650** | Lưu trữ năng lượng vận hành hệ thống độc lập | Nối vào cổng B+/B- của TP4056 |
 | **09** | **Mạch hạ áp Buck LM2596** | Hạ áp từ pin tạo nguồn 5V ổn định cấp cho Servo và ESP32 | Nối vào OUT của TP4056 |
 | **10** | **Màn hình OLED SSD1306 (128x64)** | Hiển thị trực tiếp góc quay, điện áp, dòng, công suất | I2C (SDA: 21, SCL: 22, Addr: `0x3C`) |
-| **11** | **Khung cơ khí 2 trục** | Khung xoay mica/in 3D lắp ráp 2 servo và tấm pin | — |
+| **11** | **Khung cơ khí 2 trục** | Khung xoay mica/in 3D lắp ráp 2 servo và tấm pin | - |
 
 ---
 
@@ -68,19 +68,35 @@ Toàn bộ hệ thống được thiết kế theo mô hình kiến trúc module
 CE224_SolarTracker/
 ├── CMakeLists.txt              # CMake tổng của project
 ├── sdkconfig                   # Cấu hình SDK ESP-IDF
+├── Makefile                    # Điều phối build firmware, server và web
+├── docker-compose.yml          # Dịch vụ InfluxDB 2.7
 ├── README.md                   # Hướng dẫn chi tiết hệ thống
 ├── PROGRESS.md                 # Báo cáo tiến độ bàn giao cho nhóm
-└── main/
-    ├── CMakeLists.txt          # Khai báo file nguồn và dependencies
-    ├── CE224_SolarTracker.c    # Chương trình chính (FreeRTOS Tasks)
-    │
-    ├── ldr_sensor.h / .c       # Module đọc 4 quang trở ADC1, lọc nhiễu, calib mV
-    ├── servo_control.h / .c    # Module điều khiển 2 Servo MG90S qua LEDC PWM
-    ├── ina219.h / .c           # Module giao tiếp cảm biến dòng/áp/công suất I2C
-    ├── oled_ssd1306.h / .c     # Module hiển thị màn hình OLED SSD1306 I2C
-    ├── font8x8.h               # Bảng font chữ ASCII cho màn hình OLED
-    ├── i2c_bus.h / .c          # Quản lý I2C Master Bus dùng chung an toàn
-    └── solar_tracker.h / .c    # Bộ điều khiển thuật toán bám nhật & máy trạng thái
+│
+├── firmware/                   # Mã nguồn C/C++ vi điều khiển ESP32
+│   ├── CMakeLists.txt          # Khai báo component firmware
+│   ├── CE224_SolarTracker.c    # Chương trình chính (FreeRTOS Tasks)
+│   ├── ldr_sensor.h / .c       # Module đọc 4 quang trở ADC1, lọc nhiễu, calib mV
+│   ├── servo_control.h / .c    # Module điều khiển 2 Servo MG90S qua LEDC PWM
+│   ├── ina219.h / .c           # Module giao tiếp cảm biến dòng/áp/công suất I2C
+│   ├── oled_ssd1306.h / .c     # Module hiển thị màn hình OLED SSD1306 I2C
+│   ├── font8x8.h               # Bảng font chữ ASCII cho màn hình OLED
+│   ├── i2c_bus.h / .c          # Quản lý I2C Master Bus dùng chung an toàn
+│   └── solar_tracker.h / .c    # Bộ điều khiển thuật toán bám nhật & máy trạng thái
+│
+├── cmd/
+│   ├── main.go                 # Entrypoint Go backend (Fiber v3 + WebSocket)
+│   └── mock/main.go            # Tool giả lập ESP32 telemetry để test web
+│
+├── internal/
+│   ├── hub/hub.go              # WebSocket broadcast hub
+│   ├── sensor/                 # MQTT và UART telemetry receiver
+│   └── db/influx.go            # Client ghi dữ liệu chuỗi thời gian InfluxDB
+│
+└── web/                        # Giao diện giám sát thời gian thực SvelteKit
+    └── src/
+        ├── lib/                # WebSocket store, Chart.js, AngleDisplay, LdrBar
+        └── routes/+page.svelte # Trang Dashboard chính
 ```
 
 ### Các hàm API quan trọng:
@@ -127,3 +143,35 @@ Chương trình vận hành với 2 FreeRTOS tasks chạy song song:
    - Đọc dữ liệu công suất từ cảm biến INA219.
    - Làm mới giao diện màn hình OLED SSD1306.
    - In bảng Dashboard chi tiết ra UART Serial Terminal.
+   - Xuất frame dữ liệu `DATA:...` phục vụ web backend qua UART.
+
+---
+
+## 6. Hướng dẫn chạy Web Dashboard & Backend
+
+### 6.1. Khởi động nhanh với Makefile
+
+| Lệnh | Chức năng |
+| :--- | :--- |
+| `make app` | Khởi động InfluxDB, Go Backend và Web Dev Server |
+| `make server` | Chỉ chạy Go Backend (cổng 8080) |
+| `make dev` | Chỉ chạy Frontend SvelteKit (cổng 5173) |
+| `make mock` | Chạy tool giả lập dữ liệu ESP32 phát qua MQTT để test giao diện |
+| `make down` | Dừng các container InfluxDB |
+
+### 6.2. Kiểm thử luồng dữ liệu (Mock Testing)
+
+Khi chưa kết nối phần cứng thực tế, có thể chạy giả lập để kiểm tra dashboard:
+
+```bash
+# Terminal 1: Chạy backend server
+make server
+
+# Terminal 2: Chạy web frontend
+make dev
+
+# Terminal 3: Phát dữ liệu giả lập
+make mock
+```
+
+Truy cập trình duyệt tại `http://localhost:5173` để quan sát biểu đồ công suất, thanh đo 4 LDR và góc quay servo thời gian thực.
