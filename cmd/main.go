@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/gofiber/contrib/v3/websocket"
 	"github.com/gofiber/fiber/v3"
@@ -67,5 +68,10 @@ func main() {
 		return c.JSON(stats)
 	})
 
-	log.Fatal(app.Listen(":8080"))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8081"
+	}
+
+	log.Fatal(app.Listen(":" + port))
 }
