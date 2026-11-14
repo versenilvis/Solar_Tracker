@@ -5,10 +5,8 @@
 </script>
 
 <svelte:head>
-    <title>TempLog — Sensor Monitor</title>
-    <meta
-        name="description"
-        content="Real-time temperature and humidity monitor" />
+    <title>Solar Tracker — CE224</title>
+    <meta name="description" content="Hệ thống bám sát năng lượng mặt trời 2 trục" />
 </svelte:head>
 
 {@render children()}
