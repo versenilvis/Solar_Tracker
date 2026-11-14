@@ -26,7 +26,7 @@
 
     type Props = {
         history: SensorData[];
-        field: "temperature" | "humidity";
+        field: keyof Pick<SensorData, "volt" | "curr" | "power" | "energy">;
         color: string;
         glow: string;
         unit: string;
@@ -112,7 +112,7 @@
         if (!chart) return;
         const points = history.map((d) => ({
             x: new Date(d.timestamp).getTime(),
-            y: d[field],
+            y: d[field] as number,
         }));
         chart.data.datasets[0].data = points;
         chart.update("none");
