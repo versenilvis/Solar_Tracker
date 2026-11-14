@@ -1,4 +1,4 @@
-.PHONY: build flash monitor server dev app down pkg setup
+.PHONY: build flash monitor server dev app down pkg setup mock
 
 build:
 	@cd firmware && idf.py build
@@ -11,6 +11,9 @@ monitor:
 
 server:
 	@go run ./cmd/main.go
+
+mock:
+	@go run ./cmd/mock/main.go
 
 dev:
 	@cd web && bun run dev
