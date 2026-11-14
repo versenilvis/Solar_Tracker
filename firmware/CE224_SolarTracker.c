@@ -32,11 +32,14 @@
 static const char *TAG = "MAIN_APP";
 
 // Biến trạng thái toàn cục dùng chung giữa các task
-static ldr_readings_t       s_ldr_data;
-static ina219_data_t        s_ina_data;
+static ldr_readings_t        s_ldr_data;
+static ina219_data_t         s_ina_data;
 static solar_tracker_state_t s_tracker_state;
-static bool                 s_ina219_ready = false;
-static bool                 s_oled_ready   = false;
+static bool                  s_ina219_ready = false;
+static bool                  s_oled_ready   = false;
+
+// Điện năng tích lũy (Wh) — tăng mỗi 500ms theo P = U*I
+static float                 s_energy_wh = 0.0f;
 
 /**
  * @brief Task 1: Xử lý bám nhật tự động (Tracking Task)
@@ -73,6 +76,9 @@ static void monitoring_task(void *pvParameters) {
                 s_ina_data.bus_voltage_v = 0.0f;
                 s_ina_data.current_ma = 0.0f;
                 s_ina_data.power_mw = 0.0f;
+            } else {
+                // Tích lũy điện năng: P (mW) * dt (500ms) = mWh → đổi sang Wh
+                s_energy_wh += (s_ina_data.power_mw * 0.5f) / 3600000.0f;
             }
         }
 
@@ -109,6 +115,21 @@ static void monitoring_task(void *pvParameters) {
         printf(" [TRANG THAI HE]   Chế độ: %s | OLED: %s\n",
                s_tracker_state.status_str, s_oled_ready ? "HOAT DONG" : "CHUA KET NOI");
         printf("===========================================================================\n");
+
+        // 4. Xuất dữ liệu dạng machine-readable để Go backend parse qua UART
+        // format: DATA:volt,curr,power,energy,azi,ele,ldr_tl,ldr_tr,ldr_bl,ldr_br,mode
+        printf("DATA:%.2f,%.2f,%.2f,%.4f,%d,%d,%d,%d,%d,%d,%s\n",
+               s_ina_data.bus_voltage_v,
+               s_ina_data.current_ma,
+               s_ina_data.power_mw,
+               s_energy_wh,
+               (int)s_tracker_state.current_az,
+               (int)s_tracker_state.current_el,
+               s_ldr_data.tl_raw,
+               s_ldr_data.tr_raw,
+               s_ldr_data.bl_raw,
+               s_ldr_data.br_raw,
+               s_tracker_state.status_str);
 
         vTaskDelay(pdMS_TO_TICKS(500));
     }
